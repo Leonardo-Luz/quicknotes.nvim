@@ -1,4 +1,4 @@
-## floatnotes.nvim
+## quicknotes.nvim
 
 *A Neovim Plugin for Quick Note-Taking*
 
@@ -10,11 +10,11 @@
 
 * `leonardo-luz/floatwindow`
 
-**Installation:**  Add `leonardo-luz/floatnotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/floatnotes.lua`).
+**Installation:**  Add `leonardo-luz/quicknotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/quicknotes.lua`).
 
 ```lua
 { 
-    'leonardo-luz/floatnotes.nvim',
+    'leonardo-luz/quicknotes.nvim',
     opts = {
         path = '/path/to/your/notes/directory'  -- Replace with your desired path
     },
