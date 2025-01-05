@@ -4,7 +4,10 @@ local M = {}
 
 local state = {
   window_config = {
-    floating = {},
+    floating = {
+      buf = -1,
+      win = -1,
+    },
     enter = true,
   },
   path = "",
@@ -17,7 +20,7 @@ M.quick_note = function()
 
   vim.cmd(string.format("edit %s/%s.md", state.path, filename))
 
-  vim.api.nvim_create_autocmd("bufLeave", {
+  vim.api.nvim_create_autocmd("BufLeave", {
     buffer = state.window_config.floating.buf,
     callback = function()
       vim.cmd(string.format("w %s/%s.md", state.path, filename))
