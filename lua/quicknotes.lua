@@ -20,6 +20,18 @@ M.quick_note = function()
 
   vim.cmd(string.format("edit %s/%s.md", state.path, filename))
 
+  vim.keymap.set("n", "<esc><esc>", function()
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end, {
+    buffer = state.window_config.floating.buf,
+  })
+
+  vim.keymap.set("n", "q", function()
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end, {
+    buffer = state.window_config.floating.buf,
+  })
+
   vim.api.nvim_create_autocmd("BufLeave", {
     buffer = state.window_config.floating.buf,
     callback = function()
