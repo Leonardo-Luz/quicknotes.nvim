@@ -1,1 +1,1 @@
-require("floatnotes")
+require("quicknotes")
