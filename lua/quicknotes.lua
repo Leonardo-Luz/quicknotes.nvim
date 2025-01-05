@@ -27,11 +27,11 @@ end
 
 vim.api.nvim_create_user_command("Quicknote", M.quick_note, {})
 
----@class floatnotes.Setup
+---@class quicknotes.Setup
 ---@field path string: String to where the notes will be saved
 
----setup floatnotes plugin
----@param opts floatnotes.Setup
+---setup quicknotes plugin
+---@param opts quicknotes.Setup
 M.setup = function(opts)
   state.path = opts.path
 end
