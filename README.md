@@ -26,3 +26,4 @@
 * `:QuickNote`: Opens your last note or creates a new one if none was found.
     * `n`: Go to the next note, if none was found creates a new one.
     * `p`: Go to the previous note.
+    * `<leader>d`: Delete current note
