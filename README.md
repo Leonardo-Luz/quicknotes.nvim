@@ -4,7 +4,8 @@
 
 **Features:**
 
-* Create and open notes quickly and easily in a specified directory.
+* Easy note creation and opening in a designated directory.
+* Integrated save and rename functionality.
 
 **Dependencies:**
 
@@ -23,7 +24,11 @@
 
 **Usage:**
 
-* `:QuickNote`: Opens your last note or creates a new one if none was found.
-    * `n`: Go to the next note, if none was found creates a new one.
-    * `p`: Go to the previous note.
-    * `<leader>d`: Delete current note
+* `:QuickNote`: Opens the last opened note, or creates a new one if none exists.
+* `:QuickNoteNew`: Creates a new note.
+* `:QuickNoteList`: Lists available notes for editing.
+* `:QuickNoteDelete`: Lists available notes for deletion.
+
+**Keymaps**
+
+* `<Esc><Esc>`: Closes the current note.
