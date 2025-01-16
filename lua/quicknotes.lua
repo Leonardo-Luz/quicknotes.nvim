@@ -201,14 +201,20 @@ local open_note = function(filename)
 end
 
 M.quick_note = function()
-  state.window_config.floating.buf = -1
-
-  state.window_config.floating = floatwindow.create_floating_window(state.window_config)
-
-  open_last_note()
+  if not vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+    state.window_config.floating.buf = -1
+    state.window_config.floating = floatwindow.create_floating_window(state.window_config)
+    open_last_note()
+  else
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end
 end
 
 M.quick_note_new = function()
+  if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end
+
   state.window_config.floating.buf = -1
 
   state.window_config.floating = floatwindow.create_floating_window(state.window_config)
@@ -216,6 +222,10 @@ M.quick_note_new = function()
 end
 
 M.quick_note_list = function()
+  if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end
+
   all_notes()
 
   local choices = {}
