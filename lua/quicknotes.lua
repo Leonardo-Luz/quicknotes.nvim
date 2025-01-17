@@ -222,10 +222,6 @@ M.quick_note_new = function()
 end
 
 M.quick_note_list = function()
-  if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
-    vim.api.nvim_win_close(state.window_config.floating.win, true)
-  end
-
   all_notes()
 
   local choices = {}
@@ -241,6 +237,10 @@ M.quick_note_list = function()
   }, function(choice)
     if choice == nil then
       return
+    end
+
+    if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+      vim.api.nvim_win_close(state.window_config.floating.win, true)
     end
 
     if choice == "+ New Note" then
