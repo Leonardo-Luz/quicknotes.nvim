@@ -293,8 +293,13 @@ vim.api.nvim_create_user_command("QuicknoteNew", M.quick_note_new, {})
 vim.api.nvim_create_user_command("QuicknoteDelete", M.quick_note_delete, {})
 
 M.setup = function(opts)
-  state.path = opts.path or vim.fn.expand("%:p:h") --Default to current dir
+  state.path = opts.path or vim.fn.expand("$PWD")
   state.data_file = string.format("%s/my-notes.txt", state.path)
+
+  local success = os.execute("mkdir -p " .. state.path)
+  if success ~= 0 then
+    vim.api.nvim_err_writeln("An error occurred creating the directory: " .. state.path)
+  end
 end
 
 return M
