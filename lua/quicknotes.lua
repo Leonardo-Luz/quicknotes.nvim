@@ -300,6 +300,13 @@ M.setup = function(opts)
   if success ~= 0 then
     vim.api.nvim_err_writeln("An error occurred creating the directory: " .. state.path)
   end
+
+  local file, err = io.open(state.data_file, "r+")
+  if not file then
+    vim.api.nvim_err_writeln("Error creating file '" .. state.data_file .. "': " .. err)
+    return false
+  end
+  file:close()
 end
 
 return M
