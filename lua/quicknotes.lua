@@ -293,7 +293,13 @@ vim.api.nvim_create_user_command("QuicknoteNew", M.quick_note_new, {})
 vim.api.nvim_create_user_command("QuicknoteDelete", M.quick_note_delete, {})
 
 M.setup = function(opts)
-  state.path = opts.path or vim.fn.expand("$PWD")
+  state.path = opts.path
+
+  if not state.path then
+    vim.print("Set your path in your plugin config")
+    return
+  end
+
   state.data_file = string.format("%s/my-notes.txt", state.path)
 
   local success = os.execute("mkdir -p " .. state.path)
