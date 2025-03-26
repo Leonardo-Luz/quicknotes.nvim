@@ -1,5 +1,7 @@
 local floatwindow = require("floatwindow")
 
+local Path = require("plenary.path")
+
 local M = {}
 local state = {
   window_config = {
@@ -9,41 +11,106 @@ local state = {
     },
     enter = true,
   },
-  path = "",
-  filename = "",
-  data_file = "",
+  title = nil,
   notes = {},
-  save_cmd = -1,
+  save_cmd_id = -1,
+  cur_filename = "",
+  quick_dir = vim.fn.stdpath("data") .. "/quicknotes",
+  data_file = Path:new(vim.fn.stdpath("data") .. "/quicknotes", "notes.json"),
 }
 
 local clear_remaps
 local remaps
 
-local function all_notes()
-  state.notes = {}
-  local file = io.open(state.data_file, "r")
-  if file then
-    for line in file:lines() do
-      line = line:gsub("^%s*(.-)%s*$", "%1")
-      if line ~= "" then
-        table.insert(state.notes, line)
-      end
-    end
-    file:close()
+local function new_note_path(filename)
+  return Path:new(state.quick_dir, filename)
+end
+
+--- read the note file
+local function read_note(filename)
+  local note_file = new_note_path(filename)
+
+  local file_content = {}
+
+  if note_file:exists() then
+    file_content = note_file:readlines()
+  end
+
+  return file_content
+end
+
+--- write in the note file
+local function write_note(filename, data)
+  local note_file = Path:new(state.quick_dir, filename)
+
+  note_file:write(data, "w")
+end
+
+--- read the data file
+local function read_data()
+  if state.data_file:exists() then
+    local file_content = state.data_file:read()
+    return vim.json.decode(file_content)
   else
-    vim.api.nvim_err_writeln("Error opening data file: " .. state.data_file)
+    return {}
   end
 end
 
+--- write in the file data file
+local function write_data(data)
+  state.data_file:write(vim.json.encode(data), "w")
+end
+
+local function insert_data(filename)
+  local data = read_data()
+
+  for key, data_name in pairs(data) do
+    if data_name == filename then
+      table.remove(data, key)
+      break;
+    end
+  end
+
+  table.insert(data, 1, filename)
+
+  write_data(data)
+end
+
+local function remove_data(filename)
+  local data = read_data()
+
+  for key, data_name in pairs(data) do
+    if data_name == filename then
+      table.remove(data, key)
+    end
+  end
+
+  write_data(data)
+end
+
+--- get all the notes
+local function all_notes()
+  state.notes = {}
+  local file = read_data()
+  if file then
+    state.notes = file
+  else
+    vim.print("Error opening data file: " .. state.data_file)
+  end
+end
+
+--- get the last opened note
 local function get_last_note()
   all_notes()
   if #state.notes > 0 then
-    return state.notes[#state.notes]
+    return state.notes[1]
   else
     return nil
   end
 end
 
+
+--- extracts the first markdown header as the file name
 local function get_header()
   local lines = vim.api.nvim_buf_get_lines(state.window_config.floating.buf, 0, -1, false)
   local filename = nil
@@ -53,111 +120,100 @@ local function get_header()
       break
     end
   end
-
   return filename
 end
 
-local function save()
-  local filename = get_header()
-
-  if filename == nil then
-    vim.api.nvim_err_writeln("No title found in buffer")
-    return
-  end
-
-  local file = io.open(state.data_file, "w+")
-  if not file then
-    vim.api.nvim_err_writeln("Error opening file: " .. state.data_file)
-    return
-  end
-
-  local found = false
-  for _, note in ipairs(state.notes) do
-    if note == filename then
-      found = true
-    elseif note ~= state.filename then
-      file:write(note .. "\n")
-    end
-  end
-
-  if not found then
-    table.insert(state.notes, filename)
-  end
-
-  file:write(filename .. "\n")
-  file:close()
-
-  if vim.api.nvim_buf_get_changedtick(state.window_config.floating.buf) > 0 then
-    local path = state.path .. "/" .. filename .. ".md"
-
-    vim.cmd({ cmd = "update", args = { path }, bang = true })
-
-    if state.filename ~= filename then
-      local to_delete = state.path .. "/" .. state.filename .. ".md"
-      vim.fn.delete(to_delete)
-      if vim.api.nvim_buf_is_valid(state.window_config.floating.buf) then
-        vim.api.nvim_buf_delete(state.window_config.floating.buf, { force = true })
-      end
-
-      vim.fn.delete(to_delete)
-    end
-  end
+local function get_current_note_lines()
+  return vim.api.nvim_buf_get_lines(state.window_config.floating.buf, 0, -1, false)
 end
 
+--- save current note
+local function save()
+  local new_filename = get_header()
+  local old_filename = state.cur_filename
+
+  if new_filename == nil then
+    vim.print("No title found in buffer")
+    return
+  end
+
+  local data = state.notes
+
+  local rename_id = nil
+  for key, note in pairs(data) do
+    if old_filename ~= new_filename and old_filename == note then
+      rename_id = key
+    end
+  end
+
+  if rename_id then
+    local renamed_file = table.remove(data, rename_id)
+    remove_data(renamed_file)
+
+    local old_file_path = new_note_path(renamed_file)
+
+    if old_file_path:exists() then
+      old_file_path:rename({
+        new_name = state.quick_dir .. "/" .. new_filename
+      })
+    end
+  end
+
+  local lines = table.concat(get_current_note_lines(), "\n")
+  write_note(new_filename, lines)
+
+  insert_data(new_filename)
+end
+
+--- creates a new note
 local create_note = function()
   all_notes()
 
-  state.filename = "Note-" .. os.date("%Y%m%d-%H%M%S")
+  if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+    vim.api.nvim_win_close(state.window_config.floating.win, true)
+  end
 
-  vim.cmd(string.format("edit! %s/%s.md", state.path, state.filename))
-  state.window_config.floating.buf = vim.api.nvim_get_current_buf()
+  state.cur_filename = "Note-" .. os.date("%Y%m%d-%H%M%S")
 
-  table.insert(state.notes, state.filename)
+  state.window_config.floating = floatwindow.create_floating_window(state.window_config)
+
+  table.insert(state.notes, state.cur_filename)
 
   if remaps then
     remaps()
   end
 
-  local header = { "# " .. state.filename }
+  local header = { "# " .. state.cur_filename }
   vim.api.nvim_buf_set_lines(state.window_config.floating.buf, 0, -1, true, header)
+  vim.bo[vim.api.nvim_get_current_buf()].filetype = "markdown"
+
+  local lines = table.concat(header, "\n")
+  write_note(state.cur_filename, lines)
+  insert_data(state.cur_filename)
 end
 
-local open_last_note = function()
-  all_notes()
-  state.filename = get_last_note()
-
-  if state.filename == nil then
-    create_note()
-  else
-    vim.cmd(string.format("edit! %s/%s.md", state.path, state.filename))
-    state.window_config.floating.buf = vim.api.nvim_get_current_buf()
-    if remaps then
-      remaps()
-    end
-  end
-end
-
--- WIP
+--- delete selected file and remove it from data file
 local delete_note = function(filename)
   vim.ui.select({ "Yes", "No" }, {
     prompt = "Do you realy want to delete the note " .. filename,
   }, function(choice)
     if choice == "Yes" then
-      local file = io.open(state.data_file, "w+")
-      if not file then
-        vim.api.nvim_err_writeln("Error opening file: " .. state.data_file)
+      local data = read_data()
+      if #data == 0 then
+        vim.print("Error opening file: " .. state.data_file)
         return
       end
 
-      for _, note in ipairs(state.notes) do
-        if note ~= filename then
-          file:write(note .. "\n")
+      --- remove note from data file
+      for key, note in ipairs(data) do
+        if note == filename then
+          table.remove(data, key)
+          break
         end
       end
+      write_data(data)
 
-      file:close()
-
-      local to_delete = state.path .. "/" .. filename .. ".md"
+      local to_delete = state.quick_dir .. "/" .. filename
       vim.fn.delete(to_delete)
     elseif choice == "No" then
       vim.print("Note deletion cancelled")
@@ -165,20 +221,22 @@ local delete_note = function(filename)
   end)
 end
 
+--- clear created keymaps
 clear_remaps = function()
   if vim.api.nvim_buf_is_valid(state.window_config.floating.buf) then
     vim.keymap.del("n", "<esc><esc>", { buffer = state.window_config.floating.buf })
-    vim.api.nvim_del_autocmd(state.save_cmd)
+    vim.api.nvim_del_autocmd(state.save_cmd_id)
   end
 end
 
+--- create keymaps
 remaps = function()
   vim.keymap.set("n", "<Esc><Esc>", function()
     vim.api.nvim_win_close(state.window_config.floating.win, true)
     clear_remaps()
   end, { buffer = state.window_config.floating.buf })
 
-  state.save_cmd = vim.api.nvim_create_autocmd("BufLeave", {
+  state.save_cmd_id = vim.api.nvim_create_autocmd("BufLeave", {
     buffer = state.window_config.floating.buf,
     callback = function()
       save()
@@ -186,41 +244,68 @@ remaps = function()
   })
 end
 
+--- open selected file and push it as first in the data file
 local open_note = function(filename)
   for _, note in ipairs(state.notes) do
     if filename == note then
-      state.filename = filename
-      vim.cmd(string.format("edit! %s/%s.md", state.path, filename))
-      state.window_config.floating.buf = vim.api.nvim_get_current_buf()
+      state.cur_filename = filename
+
+      if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
+        vim.api.nvim_win_close(state.window_config.floating.win, true)
+      end
+
+      state.window_config.floating = floatwindow.create_floating_window(state.window_config)
       if remaps then
         remaps()
       end
+
+      local lines = read_note(filename)
+      vim.api.nvim_buf_set_lines(state.window_config.floating.buf, 0, -1, false, lines)
+
+      --- push selected note to first in data file
+      local data = read_data()
+      for key, note_data in pairs(data) do
+        if note_data == filename then
+          table.remove(data, key)
+          break;
+        end
+      end
+      table.insert(data, filename)
+
+      vim.bo[vim.api.nvim_get_current_buf()].filetype = "markdown"
       return
     end
   end
 end
 
+--- opens last note or create a new one if none was found
+local open_last_note = function()
+  all_notes()
+  state.cur_filename = get_last_note()
+
+  if state.cur_filename == nil then
+    create_note()
+  else
+    open_note(state.cur_filename)
+  end
+end
+
+
+--- opens last opened note
 M.quick_note = function()
   if not vim.api.nvim_win_is_valid(state.window_config.floating.win) then
-    state.window_config.floating.buf = -1
-    state.window_config.floating = floatwindow.create_floating_window(state.window_config)
     open_last_note()
   else
     vim.api.nvim_win_close(state.window_config.floating.win, true)
   end
 end
 
+--- create new note and open it
 M.quick_note_new = function()
-  if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
-    vim.api.nvim_win_close(state.window_config.floating.win, true)
-  end
-
-  state.window_config.floating.buf = -1
-
-  state.window_config.floating = floatwindow.create_floating_window(state.window_config)
   create_note()
 end
 
+--- quick note open menu
 M.quick_note_list = function()
   all_notes()
 
@@ -239,28 +324,22 @@ M.quick_note_list = function()
       return
     end
 
-    if vim.api.nvim_win_is_valid(state.window_config.floating.win) then
-      vim.api.nvim_win_close(state.window_config.floating.win, true)
-    end
-
     if choice == "+ New Note" then
       M.quick_note_new()
-    end
+    else
+      for _, note in ipairs(state.notes) do
+        local striped_choice = choice:match("-%s(.*)")
 
-    for _, note in ipairs(state.notes) do
-      local striped_choice = choice:match("-%s(.*)")
-
-      if striped_choice == note then
-        state.window_config.floating.buf = -1
-
-        state.window_config.floating = floatwindow.create_floating_window(state.window_config)
-        open_note(striped_choice)
-        return
+        if striped_choice == note then
+          open_note(striped_choice)
+          return
+        end
       end
     end
   end)
 end
 
+--- quick note delete menu
 M.quick_note_delete = function()
   all_notes()
 
@@ -269,11 +348,13 @@ M.quick_note_delete = function()
     table.insert(choices, i .. " - " .. note)
   end
 
+  table.insert(choices, "X - Cancel")
+
   vim.ui.select(choices, {
     prompt = "Delete Note",
   }, function(choice)
     for _, note in ipairs(state.notes) do
-      if choice == nil then
+      if choice == nil or choice == "X - Cancel" then
         return
       end
 
@@ -293,26 +374,18 @@ vim.api.nvim_create_user_command("QuicknoteNew", M.quick_note_new, {})
 vim.api.nvim_create_user_command("QuicknoteDelete", M.quick_note_delete, {})
 
 M.setup = function(opts)
-  state.path = opts.path
+  opts = opts or {}
 
-  if not state.path then
-    vim.print("Set your path in your plugin config")
-    return
+  if vim.fn.isdirectory(state.quick_dir) == 0 then
+    vim.fn.mkdir(state.quick_dir, "p")
   end
 
-  state.data_file = string.format("%s/my-notes.txt", state.path)
-
-  local success = os.execute("mkdir -p " .. state.path)
-  if success ~= 0 then
-    vim.api.nvim_err_writeln("An error occurred creating the directory: " .. state.path)
+  if opts.keys then
+    for _, keymap in ipairs(opts.keys) do
+      local mode, lhs, rhs, key_opts = unpack(keymap)
+      vim.keymap.set(mode, lhs, rhs, key_opts)
+    end
   end
-
-  local file, err = io.open(state.data_file, "r+")
-  if not file then
-    vim.api.nvim_err_writeln("Error creating file '" .. state.data_file .. "': " .. err)
-    return false
-  end
-  file:close()
 end
 
 return M

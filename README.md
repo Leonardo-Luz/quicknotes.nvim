@@ -6,19 +6,24 @@
 
 * Easy note creation and opening in a designated directory.
 * Integrated save and rename functionality.
+* notes are saved in `.local/share/nvim/quicknotes`
 
 **Dependencies:**
 
-* `leonardo-luz/floatwindow`
+* `leonardo-luz/floatwindow.nvim`
+* `nvim-lua/plenary.nvim`
 
 **Installation:**  Add `leonardo-luz/quicknotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/quicknotes.lua`).
 
 ```lua
 { 
     'leonardo-luz/quicknotes.nvim',
-    opts = {
-        path = '/path/to/your/notes/directory'  -- Replace with your desired path
-    },
+    keys = {
+        { 'n', '<leader>nn', '<cmd>QuicknoteNew<cr>',    { desc = "Quick [N]ote [N]ew " } },
+        { 'n', '<leader>np', '<cmd>Quicknote<cr>',       { desc = "Quick [N]ote [P]review" } },
+        { 'n', '<leader>nd', '<cmd>QuicknoteDelete<cr>', { desc = "Quick [N]ote [D]elete List" } },
+        { 'n', '<leader>nl', '<cmd>QuicknoteList<cr>',   { desc = "Quick [N]ote [L]ist" } },
+    }
 }
 ```
 
