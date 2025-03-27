@@ -2,18 +2,20 @@
 
 *A Neovim Plugin for Quick Note-Taking*
 
-**Features:**
+### **Features:**
 
 * Easy note creation and opening in a designated directory.
 * Integrated save and rename functionality.
 * notes are saved in `.local/share/nvim/quicknotes`
 
-**Dependencies:**
+### **Dependencies:**
 
 * `leonardo-luz/floatwindow.nvim`
 * `nvim-lua/plenary.nvim`
 
-**Installation:**  Add `leonardo-luz/quicknotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/quicknotes.lua`).
+### **Installation:** 
+
+* Add `leonardo-luz/quicknotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/quicknotes.lua`).
 
 ```lua
 { 
@@ -27,7 +29,9 @@
 }
 ```
 
-**Usage:**
+### **Usage:**
+
+**Commands**
 
 * `:QuickNote`: Opens the last opened note, or creates a new one if none exists.
 * `:QuickNoteNew`: Creates a new note.
