@@ -1,6 +1,7 @@
 local floatwindow = require("floatwindow")
-
 local Path = require("plenary.path")
+
+local create_command = vim.api.nvim_create_user_command
 
 local M = {}
 local state = {
@@ -15,6 +16,7 @@ local state = {
   notes = {},
   save_cmd_id = -1,
   cur_filename = "",
+  dir = vim.fn.stdpath("data") .. "/quicknotes",
   quick_dir = vim.fn.stdpath("data") .. "/quicknotes",
   data_file = Path:new(vim.fn.stdpath("data") .. "/quicknotes", "notes.json"),
 }
@@ -368,13 +370,21 @@ M.quick_note_delete = function()
   end)
 end
 
-vim.api.nvim_create_user_command("Quicknote", M.quick_note, {})
-vim.api.nvim_create_user_command("QuicknoteList", M.quick_note_list, {})
-vim.api.nvim_create_user_command("QuicknoteNew", M.quick_note_new, {})
-vim.api.nvim_create_user_command("QuicknoteDelete", M.quick_note_delete, {})
+---@class Opts
+---@field custom_path string
+---@field quick_dir string
+---@field keys table
+---@field commands table
 
+---Config
+---@param opts Opts
 M.setup = function(opts)
   opts = opts or {}
+
+  if opts.custom_path then
+    state.dir = opts.custom_path
+    state.quick_dir = opts.custom_path
+  end
 
   if vim.fn.isdirectory(state.quick_dir) == 0 then
     vim.fn.mkdir(state.quick_dir, "p")
@@ -385,6 +395,18 @@ M.setup = function(opts)
       local mode, lhs, rhs, key_opts = unpack(keymap)
       vim.keymap.set(mode, lhs, rhs, key_opts)
     end
+  end
+
+  if opts.commands then
+    for _, keymap in ipairs(opts.keys) do
+      local command, method, cmd_opts = unpack(keymap)
+      create_command(command, method, cmd_opts)
+    end
+  else
+    create_command("Quicknote", M.quick_note, {})
+    create_command("QuicknoteList", M.quick_note_list, {})
+    create_command("QuicknoteNew", M.quick_note_new, {})
+    create_command("QuicknoteDelete", M.quick_note_delete, {})
   end
 end
 
