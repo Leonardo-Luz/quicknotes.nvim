@@ -18,8 +18,9 @@
 * Add `leonardo-luz/quicknotes.nvim` to your Neovim plugin manager (e.g., `init.lua` or `plugins/quicknotes.lua`).
 
 ```lua
-{ 
+{
     'leonardo-luz/quicknotes.nvim',
+    custom_path = "/home/USER/PATH/TO/NOTES", # OPTIONAL, default goes to data path (in Linux: /home/user/.local/share/nvim/quicknotes)
     keys = {
         { 'n', '<leader>nn', '<cmd>QuicknoteNew<cr>',    { desc = "Quick [N]ote [N]ew " } },
         { 'n', '<leader>np', '<cmd>Quicknote<cr>',       { desc = "Quick [N]ote [P]revious" } },
