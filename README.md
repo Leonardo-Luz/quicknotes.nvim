@@ -2,6 +2,8 @@
 
 *A Neovim Plugin for Quick Note-Taking*
 
+![Quicknotes Gif](./assets/quicknotes.gif)
+
 ### **Features:**
 
 * Easy note creation and opening in a designated directory.
